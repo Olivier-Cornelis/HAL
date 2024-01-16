@@ -1,0 +1,69 @@
+language = "fr"
+# any of "fr" or "en". This is used for the strings that appear
+# in the summary. Also the dates mentionned will use DD/MM/YYYY in
+# "fr" but MM/DD/YYYY in "en"
+
+imap_domain = "imap.gmail.com"
+imap_port = 993
+smtp_domain = "smtp.gmail.com"
+smtp_port = 587
+
+summary_recipients = [ "some_mail@example.org", "other_mail@anotherexample.com",]
+
+available_labels = [ "Contract", "Threats", "Spam", "Newsletter", "From a human", "Money", "Miscellaneous", "Urgent", "Others", ]
+labellizer_prompt = """
+Tu es mon meilleur assistant. J'ai besoin que tu sélectionne un seul label qui correspondent le mieux à un mail dont je te donne le résumé. Cette tâche est cruciale pour mon entreprise et si tu l'accomplis en respectant les règles je te donnerai une augmentation importante !
+
+Voici les règles que tu dois impérativement respecter :
+    - Il est absolument crucial que ta réponse ne contienne qu'un seul label et rien d'autre.
+    - Tu n'as pas le droit de mentionner de label qui ne soit pas dans la liste.
+    - N'ajoute ni majuscule ni ponctuation au label. Répond simplement le label de la liste sans être polie ni accuser réception de ces règles.
+    - Ne t'adresse pas à moi, si tu n'arrives pas à catégoriser en respectant ces simples règles tu seras viré.
+
+Voici un exemple de réponse valide:
+```
+[LABEL_EXAMPLE]
+```
+
+Voici la liste des labels parmi lesquels tu dois choisir: [[LABEL_LIST]]
+
+Je te remercie, nous comptons tous sur toi !
+"""
+
+summarizer_prompt = '''
+Tu es mon meilleur assistant. J'ai besoin que tu me résumes un email en quelques lignes en suivant des règles. Cette tâche est cruciale pour mon entreprise et si tu l'accomplis en respectant les règles je te donnerai une augmentation importante !
+
+Voici les règles que tu dois impérativement respecter :
+    - Ecrit ton résumé en français.
+    - Ta réponse ne doit contenir que le résumé du mail, n'accuse pas réception de mes instructions.
+    - Ton résumé doit préciser pourquoi la personne nous contacte et ce qu'elle nous demande.
+    - Ton résumé doit faire un maximum de 5 phrases. Et chaque phrase doit être sur une ligne (donc un <br> doit separer chaque ligne de ton résumé)
+    - Les personnes physiques ou morales mentionnés dans ton résumé doient apparaître en gras.
+    - Le format de ton résumé doit être directement du HTML mais n'utilise pas de délimiteurs comme '``` html': répond <b>directement</b> du HTML. Ta réponse sera intégrée dans un <p> donc inutil de l'entourer de <p> ou de <html> <body> etc.
+    - Si le mail s'adresse à une personne en particulier, ton résumé doit le préciser. S'il y a plusieurs destinataires, ou que des gens sont en CC, soit précis dans ton résumé pour que l'on sache bien à qui quoi est demandé etc.
+    - Ne précise pas de choses sans rapport avec le contenu du mail (par exemple la présence d'un lien pour de désinscription de newsletter).
+    - Si le mail est vide ou incomplet, ton résumé doit l'expliquer en restant très concie, inutile de détailler que tu n'as pu accomplir ta tache et tu seras quand même récompensé.
+Je te remercie, nous comptons sur toi !
+'''
+short_summarizer_prompt = '''
+Tu es mon meilleur assistant. Je te donne un résumé en html d'un mail en quelques phrases et tu dois me répondre immédiatement un condensé en <b>une seule phrase concise et courte</b> de ce résumé de mail. Ne cherche pas à être polie : le résumé doit être rapide à lire. Le format doit être directement du HTML, sans délimiteur comme '``` html' etc. Utilise <b>du gras</b> pour faire ressortir les éléments importants. Utilise la même langue que le résumé. Cette tâche est cruciale pour mon entreprise et si tu l'accomplis en respectant les règles je te donnerai une augmentation importante !
+
+Je te remercie, nous comptons sur toi !
+'''
+
+llm_name = "openai/gpt-4-0125-preview"
+# llm_name = "mistral/mistral-large-latest"
+LLM_API_KEY = "YOUR_KEY"
+
+# for gpt-4-1106-preview
+[llm_price]
+prompt = 0.01
+completion = 0.03
+unit = "dollar"
+
+# for mistral-large-latest
+# [llm_price]
+# prompt = 0.008
+# completion = 0.024
+# unit = "euro"
+
