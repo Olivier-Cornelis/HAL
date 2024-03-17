@@ -66,7 +66,7 @@ def p(s):
 
 
 class HAL:
-    VERSION = "0.1.1"
+    VERSION = "1.0.0"
 
     def __init__(
         self,
