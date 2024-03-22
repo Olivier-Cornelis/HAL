@@ -135,4 +135,4 @@ unit = "dollar"
 
 
 ## Credits
-* OC and AJ, and its company.
+* OC and AJ, and the company that employs him.
