@@ -1,5 +1,5 @@
 # HAL
-**Simple, customizable python script to send you a mail summarizing all mails of the last 24hours, as well as adding user-defined labels**
+**Simple, customizable python script to send you a mail summarizing all mails of the last 24hours, as well as automatically adding user-defined labels**
 
 ## Features
 * **Simple** A unique python file. Few arguments. All settings stored in a single `.toml` file.
