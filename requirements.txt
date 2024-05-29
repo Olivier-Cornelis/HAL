@@ -1,6 +1,6 @@
-litellm==1.32.1
+litellm==1.39.2
 pyfiglet==1.0.2
-fire==0.5.0
+fire==0.6.0
 email-validator==2.1.1
 tqdm==4.66.2
 tiktoken==0.6.0
