@@ -24,7 +24,7 @@ from tqdm import tqdm
 from bs4 import BeautifulSoup
 import ftfy
 import tiktoken
-from litellm import completion
+from litellm import completion, model_cost
 
 # timestamp used to create 1 logging files per run
 d = datetime.today()
@@ -173,7 +173,6 @@ class HAL:
             "smtp_port",
             "summary_recipients",
             "llm_name",
-            "llm_price",
             "LLM_API_KEY",
             "summarizer_prompt",
             "short_summarizer_prompt",
@@ -188,6 +187,29 @@ class HAL:
                 raise Exception(f"Found unexpected key in settings: {key}")
         assert self.language in [
             "fr", "en"], f"Invalid language: {self.language}"
+
+        # get llm price in dollars per token
+        try:
+            # match model name
+            if self.llm_name in model_cost:
+                self.llm_price = [
+                        model_cost[self.llm_name]["input_cost_per_token"],
+                        model_cost[self.llm_name]["output_cost_per_token"],
+                ]
+            elif self.llm_name.split("/")[1] in model_cost:
+                self.llm_price = [
+                        model_cost[self.llm_name.split("/")[1]]["input_cost_per_token"],
+                        model_cost[self.llm_name.split("/")[1]]["output_cost_per_token"],
+                ]
+            else:
+                raise ValueError(
+                    "Couldn't find model corresponding to "
+                    f"{self.llm_name} among '{list(model_cost.keys())}'"
+                )
+        except Exception as err:
+            raise Exception(
+                f"Error when getting price for model '{self.llm_name}'. "
+                f"Error: '{err}'")
 
         # if the server is not gmail, disable remote labellizer
         if not disable_labels_entirely:
@@ -505,8 +527,8 @@ class HAL:
             output_tokens = ans_summary["usage"]["completion_tokens"]
             tkn_cost = input_tokens + output_tokens
             dol_cost = (
-                input_tokens / 1000 * self.llm_price["prompt"]
-                + output_tokens / 1000 * self.llm_price["completion"]
+                input_tokens * self.llm_price["prompt"]
+                + output_tokens * self.llm_price["completion"]
             )
             sum_dol_cost = dol_cost
             # add the call from the short summary

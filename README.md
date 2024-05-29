@@ -8,7 +8,7 @@
 * **Lightweight and robust** Few dependencies, relying on standards (simple HTML, no special fonts, IMAP/SMTP). HAL.py can be used on any standard mail server. (Mostly tested on GMail so far).
 * **By a friendly developer** For anything at all, just open up an issue!
 * **User-defined labels support** Each inbox mail can be assigned a user defined label. The labels are either GMail flavored labels (non standard) or simply mentioned in the summary mail (robust).
-* **LLM Agnostic** [LiteLLM](https://docs.litellm.ai/docs/providers/) is used to enable calling any LLM with only 3 modifications to the settings (API KEY, name of the LLM, and specifying the price). For example OpenAI, Mistral, Hugginface, Claude, ...
+* **LLM Agnostic** [LiteLLM](https://docs.litellm.ai/docs/providers/) is used to enable calling any LLM with only 3 modifications to the settings (API KEY and the name of the LLM). For example OpenAI, Mistral, Hugginface, Claude, ...
 * **Cost controlled** Detailed cost are written in the summary mail. In addition, several failsafes are in place to stop bad actors from costing you anything unexpected.
 * **Obedient** With `--interactive`: asks for confirmation before doing anything important.
 * **Reasonably secure**
@@ -114,16 +114,6 @@ Je te remercie, nous comptons sur toi !
 llm_name = "openai/gpt-4o"
 # llm_name = "mistral/mistral-large-latest"
 LLM_API_KEY = "YOUR_KEY"
-# for gpt-4o
-[llm_price]
-prompt = 0.005
-completion = 0.015
-unit = "dollar"
-# for mistral-large-latest
-# [llm_price]
-# prompt = 0.008
-# completion = 0.024
-# unit = "euro"
 </code></pre></details>
 
 
