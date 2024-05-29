@@ -111,13 +111,13 @@ short_summarizer_prompt = '''
 Tu es mon meilleur assistant. Je te donne un résumé en html d'un mail en quelques phrases et tu dois me répondre immédiatement un condensé en <b>une seule phrase concise et courte</b> de ce résumé de mail. Ne cherche pas à être polie : le résumé doit être rapide à lire. Le format doit être directement du HTML, sans délimiteur comme '``` html' etc. Utilise <b>du gras</b> pour faire ressortir les éléments importants. Utilise la même langue que le résumé. Cette tâche est cruciale pour mon entreprise et si tu l'accomplis en respectant les règles je te donnerai une augmentation importante !
 Je te remercie, nous comptons sur toi !
 '''
-llm_name = "openai/gpt-4-1106-preview"
+llm_name = "openai/gpt-4o"
 # llm_name = "mistral/mistral-large-latest"
 LLM_API_KEY = "YOUR_KEY"
-# for gpt-4-1106-preview
+# for gpt-4o
 [llm_price]
-prompt = 0.01
-completion = 0.03
+prompt = 0.005
+completion = 0.015
 unit = "dollar"
 # for mistral-large-latest
 # [llm_price]

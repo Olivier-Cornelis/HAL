@@ -51,14 +51,14 @@ Tu es mon meilleur assistant. Je te donne un résumé en html d'un mail en quelq
 Je te remercie, nous comptons sur toi !
 '''
 
-llm_name = "openai/gpt-4-0125-preview"
+llm_name = "openai/gpt-4o"
 # llm_name = "mistral/mistral-large-latest"
 LLM_API_KEY = "YOUR_KEY"
 
-# for gpt-4-1106-preview
+# for gpt-4o
 [llm_price]
-prompt = 0.01
-completion = 0.03
+prompt = 0.005
+completion = 0.015
 unit = "dollar"
 
 # for mistral-large-latest
