@@ -186,7 +186,6 @@ class HAL:
         for key in self.settings:
             if key not in expected_keys:
                 raise Exception(f"Found unexpected key in settings: {key}")
-        self.fiat_name = self.settings["llm_price"]["unit"]
         assert self.language in [
             "fr", "en"], f"Invalid language: {self.language}"
 
@@ -458,7 +457,7 @@ class HAL:
 
     def process_each_mail(self):
         """for each mail, get the labels and the summary via the LLM."""
-        total_fiat_cost = 0
+        total_dol_cost = 0
         for mail in tqdm(self.inbox_mails, desc="Processing", unit="mail"):
             content = mail["ready_to_summarize"]
             p("\n\nMail to summarize:")
@@ -505,11 +504,11 @@ class HAL:
             input_tokens = ans_summary["usage"]["prompt_tokens"]
             output_tokens = ans_summary["usage"]["completion_tokens"]
             tkn_cost = input_tokens + output_tokens
-            fiat_cost = (
+            dol_cost = (
                 input_tokens / 1000 * self.llm_price["prompt"]
                 + output_tokens / 1000 * self.llm_price["completion"]
             )
-            sum_fiat_cost = fiat_cost
+            sum_dol_cost = dol_cost
             # add the call from the short summary
             input_tokens += short_ans_summary["usage"]["prompt_tokens"]
             output_tokens += short_ans_summary["usage"]["completion_tokens"]
@@ -517,12 +516,12 @@ class HAL:
                 input_tokens += ans_label["usage"]["prompt_tokens"]
                 output_tokens += ans_label["usage"]["completion_tokens"]
             tkn_cost += input_tokens + output_tokens - tkn_cost
-            fiat_cost += (
+            dol_cost += (
                 input_tokens / 1000 * self.llm_price["prompt"]
                 + output_tokens / 1000 * self.llm_price["completion"]
-                - fiat_cost
+                - dol_cost
             )
-            label_fiat_cost = fiat_cost - sum_fiat_cost
+            label_dol_cost = dol_cost - sum_dol_cost
 
             # show results
             p("\n###\nMail summary:")
@@ -532,7 +531,7 @@ class HAL:
             if not self.disable_labels_entirely:
                 p(f"Found label: {mess_label}")
             p(f"Token cost for input: {input_tokens} and output {output_tokens}")
-            p(f"Fiat cost in {self.fiat_name}: {round(fiat_cost, 5)}")
+            p(f"Dollar cost: ${round(dol_cost, 5)}")
             p("###\n")
             # self.interact()
 
@@ -541,10 +540,10 @@ class HAL:
                 mail["LLM_label"] = mess_label
             mail["LLM_summary"] = mess_summary
             mail["LLM_short_summary"] = short_mess_summary
-            mail["fiat_cost"] = fiat_cost
+            mail["dol_cost"] = dol_cost
             mail["tkn_cost"] = tkn_cost
-            mail["fiat_cost_summary"] = sum_fiat_cost
-            mail["fiat_cost_label"] = label_fiat_cost
+            mail["dol_cost_summary"] = sum_dol_cost
+            mail["dol_cost_label"] = label_dol_cost
 
             # assign label remotely
             if not self.disable_labels_entirely:
@@ -561,11 +560,11 @@ class HAL:
                     )
 
             # failsafe price check
-            total_fiat_cost += fiat_cost
-            if total_fiat_cost >= self.total_cost_limit:
+            total_dol_cost += dol_cost
+            if total_dol_cost >= self.total_cost_limit:
                 self.interact(
-                    f"Total cost so far in {self.fiat_name} is {total_fiat_cost} "
-                    f"which is above {self.total_cost_limit}."
+                    f"Total cost so far is ${total_dol_cost} "
+                    f"which is above ${self.total_cost_limit}."
                 )
 
     def formating_summary_mail(self):
@@ -586,7 +585,7 @@ class HAL:
                 <ul>
                     <li style="list-style-type: none;">Nombre de mails: {len(self.inbox_mails)}</li>
                     <li style="list-style-type: none;">LLM utilisé: {self.llm_name}</li>
-                    <li style="list-style-type: none;">Coût total: TKN_TOTAL_COST tokens (FIAT_TOTAL_COST {self.fiat_name})</li>
+                    <li style="list-style-type: none;">Coût total: TKN_TOTAL_COST tokens ($DOL_TOTAL_COST)</li>
                 </ul>
                 <ul>
             """
@@ -597,11 +596,11 @@ class HAL:
                 <ul>
                     <li style="list-style-type: none;">Number of emails: {len(self.inbox_mails)}</li>
                     <li style="list-style-type: none;">LLM used: {self.llm_name}</li>
-                    <li style="list-style-type: none;">Total cost: TKN_TOTAL_COST tokens (FIAT_TOTAL_COST {self.fiat_name})</li>
+                    <li style="list-style-type: none;">Total cost: TKN_TOTAL_COST tokens ($DOL_TOTAL_COST)</li>
                 </ul>
                 <ul>
             """
-        total_fiat_cost = 0
+        total_dol_cost = 0
         total_tkn_cost = 0
 
         # sort mail by label:
@@ -688,9 +687,9 @@ class HAL:
                 """
             html_mail += f"""
                 <li style="list-style-type: none;">Token cost: {mail['tkn_cost']}</li>
-                <li style="list-style-type: none;">Fiat cost for summary: {round(float(mail['fiat_cost_summary']), 5)}</li>
-                <li style="list-style-type: none;">Fiat cost for labels: {round(float(mail['fiat_cost_label']), 5)}</li>
-                <li style="list-style-type: none;">Fiat cost in {self.fiat_name}: {round(float(mail['fiat_cost']), 5)}</li>
+                <li style="list-style-type: none;">Dollar cost for summary: ${round(float(mail['dol_cost_summary']), 5)}</li>
+                <li style="list-style-type: none;">Dollar cost for labels: ${round(float(mail['dol_cost_label']), 5)}</li>
+                <li style="list-style-type: none;">Dollar cost: ${round(float(mail['dol_cost']), 5)}</li>
                 """
             if not self.detailed_price:
                 html_mail += """
@@ -705,7 +704,7 @@ class HAL:
             <br>
             """
             total_tkn_cost += mail["tkn_cost"]
-            total_fiat_cost += mail["fiat_cost"]
+            total_dol_cost += mail["dol_cost"]
 
         html_mail += """
             </ul>
@@ -713,7 +712,7 @@ class HAL:
         """
         html_mail = html_mail.replace("TKN_TOTAL_COST", str(total_tkn_cost))
         html_mail = html_mail.replace(
-            "FIAT_TOTAL_COST", str(round(total_fiat_cost, 2)))
+            "DOL_TOTAL_COST", str(round(total_dol_cost, 2)))
 
         html_mail = "".join([item.strip() for item in html_mail.splitlines()])
 
