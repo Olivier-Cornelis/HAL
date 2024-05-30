@@ -318,7 +318,7 @@ class HAL:
             p("Labellize and summarize each mail.")
         self.interact()
         self.process_each_mail()
-        self.formating_summary_mail()
+        self.html_mail = self.formating_summary_mail()
 
         p("Sending the summary.")
         self.interact()
@@ -601,7 +601,7 @@ class HAL:
                 )
 
     @typechecked
-    def formating_summary_mail(self) -> None:
+    def formating_summary_mail(self) -> str:
         "create the html of the summary to send"
         html_mail = """
         <html>
@@ -750,7 +750,7 @@ class HAL:
 
         html_mail = "".join([item.strip() for item in html_mail.splitlines()])
 
-        self.html_mail = html_mail
+        return html_mail
 
     @typechecked
     def _mailinfo(self, mailid: str) -> dict:
