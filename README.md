@@ -1,8 +1,8 @@
 # HAL
-**Simple, customizable python script to send you a mail summarizing all mails of the last 24hours, as well as automatically adding user-defined labels**
+**Minimalist yet customizable python script to e-mail a summary of all the mails of the last 24 hours. Supports adding labels to unreads along the way.**
 
 ## Features
-* **Simple** A unique python file. Few arguments. All settings stored in a single `.toml` file.
+* **Simple** A single compact python file. Few arguments. All settings stored in a single `.toml` file.
 * **Time efficient** By default each mail is summarized as a max 5 sentence summary, then as a 1 sentence summary.
 * **Customizable** Prompts used to summarize the mails are accessible in the toml settings file and can be tailored to any user or team. Works on any language, on any topic.
 * **Lightweight and robust** Few dependencies, relying on standards (simple HTML, no special fonts, IMAP/SMTP). HAL.py can be used on any standard mail server. (Mostly tested on GMail so far).
