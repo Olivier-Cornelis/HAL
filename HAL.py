@@ -327,7 +327,7 @@ class HAL:
             ans = input(f"{message} (y/n/debug)")
             if ans == "debug":
                 breakpoint()
-                return self.interactive("Continue?")
+                return self.interact("Continue?")
             elif ans != "y":
                 raise Exception("Exit.")
 
