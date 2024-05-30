@@ -71,7 +71,7 @@ def p(s: str) -> None:
 
 
 class HAL:
-    VERSION = "1.0.0"
+    VERSION = "1.1.0"
 
     @typechecked
     def __init__(
