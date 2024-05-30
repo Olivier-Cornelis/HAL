@@ -317,7 +317,17 @@ class HAL:
         else:
             p("Labellize and summarize each mail.")
         self.interact()
-        self.process_each_mail()
+
+        self.total_dol_cost = 0
+        self.inbox_mails = [
+            self.process_each_mail(mail)
+            for mail in tqdm(
+                self.inbox_mails,
+                desc="Processing",
+                unit="mail"
+            )
+        ]
+
         self.html_mail = self.formating_summary_mail()
 
         p("Sending the summary.")
@@ -486,119 +496,118 @@ class HAL:
         except Exception as err:
             p(f"Error when converting date '{mail['Date']}': '{err}'")
             mail["parsed_date"] = mail["Date"]
+        return mail
 
     @typechecked
-    def process_each_mail(self) -> None:
+    def process_each_mail(self, mail: dict) -> dict:
         """for each mail, get the labels and the summary via the LLM."""
-        total_dol_cost = 0
-        for mail in tqdm(self.inbox_mails, desc="Processing", unit="mail"):
-            content = mail["ready_to_summarize"]
-            p("\n\nMail to summarize:")
-            p(content)
-            tk = tokenize(content)
-            p(f"Number of tokens: {tk}")
+        content = mail["ready_to_summarize"]
+        p("\n\nMail to summarize:")
+        p(content)
+        tk = tokenize(content)
+        p(f"Number of tokens: {tk}")
 
-            # check that the run will not be unexpectedly expensive
-            if tk >= self.tkn_warn_limit:
-                self.interact(
-                    f"Number of token " f"is above {self.tkn_warn_limit}.")
+        # check that the run will not be unexpectedly expensive
+        if tk >= self.tkn_warn_limit:
+            self.interact(
+                f"Number of token " f"is above {self.tkn_warn_limit}.")
 
-            # get summary from LLM
-            p("Summarizing.")
-            ans_summary = self._summarizer(
-                content, prompt=self.summarizer_prompt)
-            mess_summary = ans_summary["choices"][0]["message"]["content"]
+        # get summary from LLM
+        p("Summarizing.")
+        ans_summary = self._summarizer(
+            content, prompt=self.summarizer_prompt)
+        mess_summary = ans_summary["choices"][0]["message"]["content"]
 
-            p("Shortening the summary.")
-            short_ans_summary = self._summarizer(
-                mess_summary, prompt=self.short_summarizer_prompt
+        p("Shortening the summary.")
+        short_ans_summary = self._summarizer(
+            mess_summary, prompt=self.short_summarizer_prompt
+        )
+        short_mess_summary = short_ans_summary["choices"][0]["message"]["content"]
+
+        # get labels from LLM
+        if not self.disable_labels_entirely:
+            p("Labellizing")
+            ans_label = self._labelizer(short_mess_summary)
+            mess_label = ans_label["choices"][0]["message"]["content"].strip(
             )
-            short_mess_summary = short_ans_summary["choices"][0]["message"]["content"]
-
-            # get labels from LLM
-            if not self.disable_labels_entirely:
-                p("Labellizing")
-                ans_label = self._labelizer(short_mess_summary)
-                mess_label = ans_label["choices"][0]["message"]["content"].strip(
-                )
-                if mess_label not in self.available_labels:
-                    if self.interactive:
-                        self.interact(
-                            f"The LLM selected label '{mess_label}' which is not "
-                            f"in {self.available_labels}"
-                        )
-                    else:
-                        p(
-                            f"The LLM selected label '{mess_label}' which is "
-                            "not in {self.available_labels}"
-                        )
-
-            # get cost of both LLM calls
-            input_tokens = ans_summary["usage"]["prompt_tokens"]
-            output_tokens = ans_summary["usage"]["completion_tokens"]
-            tkn_cost = input_tokens + output_tokens
-            dol_cost = (
-                input_tokens * self.llm_price["prompt"]
-                + output_tokens * self.llm_price["completion"]
-            )
-            sum_dol_cost = dol_cost
-            # add the call from the short summary
-            input_tokens += short_ans_summary["usage"]["prompt_tokens"]
-            output_tokens += short_ans_summary["usage"]["completion_tokens"]
-            if not self.disable_labels_entirely:
-                input_tokens += ans_label["usage"]["prompt_tokens"]
-                output_tokens += ans_label["usage"]["completion_tokens"]
-            tkn_cost += input_tokens + output_tokens - tkn_cost
-            dol_cost += (
-                input_tokens / 1000 * self.llm_price["prompt"]
-                + output_tokens / 1000 * self.llm_price["completion"]
-                - dol_cost
-            )
-            label_dol_cost = dol_cost - sum_dol_cost
-
-            # show results
-            p("\n###\nMail summary:")
-            p(BeautifulSoup(mess_summary, "html.parser").get_text())
-            p("\nShortened to:")
-            p(BeautifulSoup(short_mess_summary, "html.parser").get_text())
-            if not self.disable_labels_entirely:
-                p(f"Found label: {mess_label}")
-            p(f"Token cost for input: {input_tokens} and output {output_tokens}")
-            p(f"Dollar cost: ${round(dol_cost, 5)}")
-            p("###\n")
-            # self.interact()
-
-            # store
-            if not self.disable_labels_entirely:
-                mail["LLM_label"] = mess_label
-            mail["LLM_summary"] = mess_summary
-            mail["LLM_short_summary"] = short_mess_summary
-            mail["dol_cost"] = dol_cost
-            mail["tkn_cost"] = tkn_cost
-            mail["dol_cost_summary"] = sum_dol_cost
-            mail["dol_cost_label"] = label_dol_cost
-
-            # assign label remotely
-            if not self.disable_labels_entirely:
-                if not self.dont_labellize:
-                    p("Assigning labels.")
-                    for lab in mess_label + ["HAL"]:
-                        result, _ = self.imap.uid(
-                            "STORE", mail["mail_id"], "+X-GM-LABELS", f"({lab})"
-                        )
-                        assert result == "OK", f"Invalid response: {result}"
+            if mess_label not in self.available_labels:
+                if self.interactive:
+                    self.interact(
+                        f"The LLM selected label '{mess_label}' which is not "
+                        f"in {self.available_labels}"
+                    )
                 else:
                     p(
-                        "Not actually setting the label on the server because 'dont_labellize' is True"
+                        f"The LLM selected label '{mess_label}' which is "
+                        "not in {self.available_labels}"
                     )
 
-            # failsafe price check
-            total_dol_cost += dol_cost
-            if total_dol_cost >= self.total_cost_limit:
-                self.interact(
-                    f"Total cost so far is ${total_dol_cost} "
-                    f"which is above ${self.total_cost_limit}."
+        # get cost of both LLM calls
+        input_tokens = ans_summary["usage"]["prompt_tokens"]
+        output_tokens = ans_summary["usage"]["completion_tokens"]
+        tkn_cost = input_tokens + output_tokens
+        dol_cost = (
+            input_tokens * self.llm_price["prompt"]
+            + output_tokens * self.llm_price["completion"]
+        )
+        sum_dol_cost = dol_cost
+        # add the call from the short summary
+        input_tokens += short_ans_summary["usage"]["prompt_tokens"]
+        output_tokens += short_ans_summary["usage"]["completion_tokens"]
+        if not self.disable_labels_entirely:
+            input_tokens += ans_label["usage"]["prompt_tokens"]
+            output_tokens += ans_label["usage"]["completion_tokens"]
+        tkn_cost += input_tokens + output_tokens - tkn_cost
+        dol_cost += (
+            input_tokens / 1000 * self.llm_price["prompt"]
+            + output_tokens / 1000 * self.llm_price["completion"]
+            - dol_cost
+        )
+        label_dol_cost = dol_cost - sum_dol_cost
+
+        # show results
+        p("\n###\nMail summary:")
+        p(BeautifulSoup(mess_summary, "html.parser").get_text())
+        p("\nShortened to:")
+        p(BeautifulSoup(short_mess_summary, "html.parser").get_text())
+        if not self.disable_labels_entirely:
+            p(f"Found label: {mess_label}")
+        p(f"Token cost for input: {input_tokens} and output {output_tokens}")
+        p(f"Dollar cost: ${round(dol_cost, 5)}")
+        p("###\n")
+        # self.interact()
+
+        # store
+        if not self.disable_labels_entirely:
+            mail["LLM_label"] = mess_label
+        mail["LLM_summary"] = mess_summary
+        mail["LLM_short_summary"] = short_mess_summary
+        mail["dol_cost"] = dol_cost
+        mail["tkn_cost"] = tkn_cost
+        mail["dol_cost_summary"] = sum_dol_cost
+        mail["dol_cost_label"] = label_dol_cost
+
+        # assign label remotely
+        if not self.disable_labels_entirely:
+            if not self.dont_labellize:
+                p("Assigning labels.")
+                for lab in mess_label + ["HAL"]:
+                    result, _ = self.imap.uid(
+                        "STORE", mail["mail_id"], "+X-GM-LABELS", f"({lab})"
+                    )
+                    assert result == "OK", f"Invalid response: {result}"
+            else:
+                p(
+                    "Not actually setting the label on the server because 'dont_labellize' is True"
                 )
+
+        # failsafe price check
+        self.total_dol_cost += dol_cost
+        if self.total_dol_cost >= self.total_cost_limit:
+            self.interact(
+                f"Total cost so far is ${self.total_dol_cost} "
+                f"which is above ${self.total_cost_limit}."
+            )
 
     @typechecked
     def formating_summary_mail(self) -> str:
