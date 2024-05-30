@@ -352,7 +352,8 @@ class HAL:
             elif ans != "y":
                 raise Exception("Exit.")
 
-    def fetch_yesterday_mail(self):
+    @typechecked
+    def fetch_yesterday_mail(self) -> List[dict]:
         "load the mail received since yesterday"
         self.imap.select("INBOX")
         state, ids = self.imap.uid(
@@ -380,7 +381,7 @@ class HAL:
         return inbox_mails
 
     @typechecked
-    def parse_each_mail(self, mail):
+    def parse_each_mail(self, mail: dict) -> dict:
         """for each mail, parse its content and metadata into an
         LLM friendly format"""
         subj = mail["Subject"]
