@@ -303,9 +303,14 @@ class HAL:
         self.interact()
 
         # actual execution
-        p("Fetching and parsing mail from yesterday.")
-        self.fetch_yesterday_mail()
-        self.parse_each_mail()
+        p("Fetching mail from yesterday.")
+        self.inbox_mails = self.fetch_yesterday_mail()
+
+        p(f"Parsing {len(self.inbox_mails)} mails.")
+        self.inbox_mails = [
+            self.parse_each_mail(mail)
+            for mail in self.inbox_mails
+        ]
 
         if disable_labels_entirely:
             p("Summarize each mail.")
@@ -362,127 +367,125 @@ class HAL:
                 f"which is above {self.n_mail_limit}. Do you "
                 "confirm?"
             )
-        self.inbox_mails = inbox_mails
-        return
+        return inbox_mails
 
     @typechecked
-    def parse_each_mail(self) -> None:
+    def parse_each_mail(self, mail):
         """for each mail, parse its content and metadata into an
         LLM friendly format"""
-        for mail in self.inbox_mails:
-            subj = mail["Subject"]
-            date = " ".join(mail["Date"].split(" ")[:-2])
-            sender = mail["From"]
-            if "Cc" in mail:
-                in_cc = mail["Cc"]
+        subj = mail["Subject"]
+        date = " ".join(mail["Date"].split(" ")[:-2])
+        sender = mail["From"]
+        if "Cc" in mail:
+            in_cc = mail["Cc"]
+        else:
+            in_cc = "None"
+        if "Reply-To" in mail:
+            rpt = mail["Reply-To"]
+        else:
+            rpt = "None"
+        destin = mail["To"]
+
+        # if too many cc or recipent, redact the middle
+        if len(destin) > 100:
+            destin = destin[:50] + " [TOO_MANY] " + destin[:-50:]
+        if len(rpt) > 100:
+            rpt = rpt[:50] + " [TOO_MANY] " + rpt[:-50:]
+        if len(in_cc) > 100:
+            in_cc = in_cc[:50] + " [TOO_MANY] " + in_cc[:-50:]
+
+        # shorten subject if too long
+        if len(subj) > 100:
+            subj = subj[:100] + " [TOO LONG]"
+
+        n_attach = len(mail["attachments"])
+
+        # format the attachment names
+        attach_list = []
+        if n_attach:
+            attach_list = mail["attachments"]
+
+            # make sure that the name of the file is not longer than 15 characters
+            # but keep the extension
+            for i, a in enumerate(attach_list):
+                if "." not in a:
+                    continue
+                if len(a) > 15:
+                    ext = a.split(".")[-1]
+                    a = f"{a[:13]}.{ext}"
+                    attach_list[i] = a
+        mail["attachments_list"] = attach_list
+
+        # get the mail content
+        # format the mail content as something easy to parse by the llm
+        txt = [
+            BeautifulSoup(dc, "html.parser").get_text()
+            for dc in mail["decoded_content"]
+        ]
+        txt = [ftfy.fix_text(t) for t in txt]
+        txt = "\n".join(txt)
+
+        # remove the api key if by any chance it's in the mail
+        txt = txt.replace(self.LLM_API_KEY, "[API_KEY_REDACTED]")
+
+        # remove http links as they consume a lot of tokens
+        txt = re.sub(r"(http|https)://[^\s]+", "[HTTP_LINK]", txt)
+
+        # replace long spaces
+        txt = txt.replace("\xa0", " ").replace("\xc2", " ")
+
+        # always use the same newline, and restrict how many in a row
+        txt = txt.replace("\r", "\n")
+        txt = "\n".join([t.strip() for t in txt.splitlines()])
+
+        # remove all newlines if many tokens
+        if tokenize(txt) > 2000:
+            txt = txt.replace("\n", "")
+
+        content = dedent(f"""
+        Subject: '{subj}'
+        Date: '{date}'
+        Sender: '{sender}'
+        Recipients: '{destin}'
+        CC: '{in_cc}'
+        Reply-To: '{rpt}'""")
+        if n_attach:
+            content += f"\Attachments: '{', '.join(attach_list)}'"
+        content += dedent("""
+        Body:
+        '''
+        TXT
+        '''
+        """).replace("TXT", txt.strip())
+        content = dedent(content).strip()
+
+        # store in the dictionnary
+        mail["ready_to_summarize"] = content
+        try:
+            parsed_date = mail["Date"]
+            if "(" in parsed_date:
+                # detect timezone
+                tz = parsed_date.split("(")[1].split(")")[0]
+                parsed_date = parsed_date.replace(f"({tz})", "").strip()
             else:
-                in_cc = "None"
-            if "Reply-To" in mail:
-                rpt = mail["Reply-To"]
-            else:
-                rpt = "None"
-            destin = mail["To"]
-
-            # if too many cc or recipent, redact the middle
-            if len(destin) > 100:
-                destin = destin[:50] + " [TOO_MANY] " + destin[:-50:]
-            if len(rpt) > 100:
-                rpt = rpt[:50] + " [TOO_MANY] " + rpt[:-50:]
-            if len(in_cc) > 100:
-                in_cc = in_cc[:50] + " [TOO_MANY] " + in_cc[:-50:]
-
-            # shorten subject if too long
-            if len(subj) > 100:
-                subj = subj[:100] + " [TOO LONG]"
-
-            n_attach = len(mail["attachments"])
-
-            # format the attachment names
-            attach_list = []
-            if n_attach:
-                attach_list = mail["attachments"]
-
-                # make sure that the name of the file is not longer than 15 characters
-                # but keep the extension
-                for i, a in enumerate(attach_list):
-                    if "." not in a:
-                        continue
-                    if len(a) > 15:
-                        ext = a.split(".")[-1]
-                        a = f"{a[:13]}.{ext}"
-                        attach_list[i] = a
-            mail["attachments_list"] = attach_list
-
-            # get the mail content
-            # format the mail content as something easy to parse by the llm
-            txt = [
-                BeautifulSoup(dc, "html.parser").get_text()
-                for dc in mail["decoded_content"]
-            ]
-            txt = [ftfy.fix_text(t) for t in txt]
-            txt = "\n".join(txt)
-
-            # remove the api key if by any chance it's in the mail
-            txt = txt.replace(self.LLM_API_KEY, "[API_KEY_REDACTED]")
-
-            # remove http links as they consume a lot of tokens
-            txt = re.sub(r"(http|https)://[^\s]+", "[HTTP_LINK]", txt)
-
-            # replace long spaces
-            txt = txt.replace("\xa0", " ").replace("\xc2", " ")
-
-            # always use the same newline, and restrict how many in a row
-            txt = txt.replace("\r", "\n")
-            txt = "\n".join([t.strip() for t in txt.splitlines()])
-
-            # remove all newlines if many tokens
-            if tokenize(txt) > 2000:
-                txt = txt.replace("\n", "")
-
-            content = dedent(f"""
-            Subject: '{subj}'
-            Date: '{date}'
-            Sender: '{sender}'
-            Recipients: '{destin}'
-            CC: '{in_cc}'
-            Reply-To: '{rpt}'""")
-            if n_attach:
-                content += f"\Attachments: '{', '.join(attach_list)}'"
-            content += dedent("""
-            Body:
-            '''
-            TXT
-            '''
-            """).replace("TXT", txt.strip())
-            content = dedent(content).strip()
-
-            # store in the dictionnary
-            mail["ready_to_summarize"] = content
-            try:
-                parsed_date = mail["Date"]
-                if "(" in parsed_date:
-                    # detect timezone
-                    tz = parsed_date.split("(")[1].split(")")[0]
-                    parsed_date = parsed_date.replace(f"({tz})", "").strip()
-                else:
-                    tz = "UTC"
-                parsed_date += " (UTC)"
-                parsed_date = datetime.strptime(
-                    parsed_date, "%a, %d %b %Y %H:%M:%S %z (UTC)"
+                tz = "UTC"
+            parsed_date += " (UTC)"
+            parsed_date = datetime.strptime(
+                parsed_date, "%a, %d %b %Y %H:%M:%S %z (UTC)"
+            )
+            if tz != "UTC":
+                parsed_date = parsed_date.astimezone(ZoneInfo(tz))
+            if self.language == "fr":
+                mail["parsed_date"] = (
+                    f"{parsed_date.day}/{parsed_date.month}/{parsed_date.year} à {parsed_date.hour}:{parsed_date.minute:02d}"
                 )
-                if tz != "UTC":
-                    parsed_date = parsed_date.astimezone(ZoneInfo(tz))
-                if self.language == "fr":
-                    mail["parsed_date"] = (
-                        f"{parsed_date.day}/{parsed_date.month}/{parsed_date.year} à {parsed_date.hour}:{parsed_date.minute:02d}"
-                    )
-                elif self.language == "en":
-                    mail["parsed_date"] = (
-                        f"{parsed_date.month}/{parsed_date.day}/{parsed_date.year} at {parsed_date.hour}:{parsed_date.minute:02d}"
-                    )
-            except Exception as err:
-                p(f"Error when converting date '{mail['Date']}': '{err}'")
-                mail["parsed_date"] = mail["Date"]
+            elif self.language == "en":
+                mail["parsed_date"] = (
+                    f"{parsed_date.month}/{parsed_date.day}/{parsed_date.year} at {parsed_date.hour}:{parsed_date.minute:02d}"
+                )
+        except Exception as err:
+            p(f"Error when converting date '{mail['Date']}': '{err}'")
+            mail["parsed_date"] = mail["Date"]
 
     @typechecked
     def process_each_mail(self) -> None:
