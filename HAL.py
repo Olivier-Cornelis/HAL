@@ -1,3 +1,5 @@
+from typeguard import typechecked
+from typing import List
 import random
 import imaplib
 import smtplib
@@ -54,12 +56,14 @@ log.addHandler(file_handler)
 tokenizer = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 
-def tokenize(text):
+@typechecked
+def tokenize(text: str) -> int:
     "get token length of a string"
     return len(tokenizer.encode(text))
 
 
-def p(s):
+@typechecked
+def p(s: str) -> None:
     "quick way to print and log to file at the same time"
     log.info(s)
     tqdm.write(s)
@@ -68,6 +72,7 @@ def p(s):
 class HAL:
     VERSION = "1.0.0"
 
+    @typechecked
     def __init__(
         self,
         inbox_mail: str,
@@ -83,7 +88,7 @@ class HAL:
         total_cost_limit: int = 1,
         n_mail_limit: int = 20,
         detailed_price: bool = False,
-    ):
+        ) -> None:
         """
         Parameters
         ----------
@@ -319,7 +324,8 @@ class HAL:
         # all done
         self.exit()
 
-    def interact(self, message="Do you confirm?"):
+    @typechecked
+    def interact(self, message: str = "Do you confirm?") -> None:
         """If the argument interactive is True then key steps of the
         program will require manual confirmation. Otherwise this does nothing.
         """
@@ -359,7 +365,8 @@ class HAL:
         self.inbox_mails = inbox_mails
         return
 
-    def parse_each_mail(self):
+    @typechecked
+    def parse_each_mail(self) -> None:
         """for each mail, parse its content and metadata into an
         LLM friendly format"""
         for mail in self.inbox_mails:
@@ -477,7 +484,8 @@ class HAL:
                 p(f"Error when converting date '{mail['Date']}': '{err}'")
                 mail["parsed_date"] = mail["Date"]
 
-    def process_each_mail(self):
+    @typechecked
+    def process_each_mail(self) -> None:
         """for each mail, get the labels and the summary via the LLM."""
         total_dol_cost = 0
         for mail in tqdm(self.inbox_mails, desc="Processing", unit="mail"):
@@ -589,7 +597,8 @@ class HAL:
                     f"which is above ${self.total_cost_limit}."
                 )
 
-    def formating_summary_mail(self):
+    @typechecked
+    def formating_summary_mail(self) -> None:
         "create the html of the summary to send"
         html_mail = """
         <html>
@@ -740,7 +749,8 @@ class HAL:
 
         self.html_mail = html_mail
 
-    def _mailinfo(self, mailid: str):
+    @typechecked
+    def _mailinfo(self, mailid: str) -> dict:
         "given a mailid, fetch all data and metadata related to the mail"
         # read the mail
         # state, data = self.imap.uid('fetch', mailid, '(RFC822)')
@@ -852,7 +862,8 @@ class HAL:
         )
         return answer
 
-    def send_summary(self):
+    @typechecked
+    def send_summary(self) -> None:
         "send the summary"
         p("Mail to send:")
         # p(BeautifulSoup(self.html_mail, "html.parser").get_text())
