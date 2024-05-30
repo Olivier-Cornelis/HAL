@@ -1,5 +1,5 @@
 from typeguard import typechecked
-from typing import List
+from typing import List, Union
 import random
 import imaplib
 import smtplib
@@ -27,6 +27,7 @@ from bs4 import BeautifulSoup
 import ftfy
 import tiktoken
 from litellm import completion, model_cost
+from litellm.utils import ModelResponse
 
 # timestamp used to create 1 logging files per run
 d = datetime.today()
@@ -822,7 +823,8 @@ class HAL:
         metadata["decoded_content"] = content
         return metadata
 
-    def _labelizer(self, content: str):
+    @typechecked
+    def _labelizer(self, content: str) -> ModelResponse:
         "one API call to get the labels to assign to a given mail"
         assert (
             not self.disable_labels_entirely
@@ -850,7 +852,8 @@ class HAL:
         )
         return answer
 
-    def _summarizer(self, mail_content: str, prompt: str):
+    @typechecked
+    def _summarizer(self, mail_content: str, prompt: str) -> ModelResponse:
         "one API call to get the summary of a given mail"
         if self.use_cache:
             caller = self.mem.cache(llm_call, ignore=["verbose"])
@@ -902,17 +905,19 @@ class HAL:
         self.smtp.sendmail(self.inbox_mail, self.summary_recipients, message)
         self.smtp.quit()
 
-    def exit(self):
+    @typechecked
+    def exit(self) -> None:
         # otherwise fire will display the help page
         sys.exit(0)
 
 
+@typechecked
 def llm_call(
     modelname: str,
     messages: list[dict],
     temperature: float,
     verbose: bool,
-):
+    ) -> ModelResponse:
     "call to the LLM api"
     if verbose:
         p(json.dumps(messages, indent=4, ensure_ascii=False))
@@ -925,7 +930,8 @@ def llm_call(
     return answer
 
 
-def decode_item(item):
+@typechecked
+def decode_item(item: Union[bytes, str]) -> str:
     if not isinstance(item, str):
         enc = chardet.detect(item)["encoding"]
         try:
