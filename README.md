@@ -5,7 +5,7 @@
 * **Simple** A single compact python file. Few arguments. All settings stored in a single `.toml` file.
 * **Time efficient** By default each mail is summarized as a max 5 sentence summary, then as a 1 sentence summary.
 * **Customizable** Prompts used to summarize the mails are accessible in the toml settings file and can be tailored to any user or team. Works on any language, on any topic.
-* **Lightweight and robust** Few dependencies, relying on standards (simple HTML, no special fonts, IMAP/SMTP). HAL.py can be used on any standard mail server. (Mostly tested on GMail so far).
+* **Lightweight and robust** Few dependencies, all functions are statically typed, mail APIs rely on standards (simple HTML, no special fonts, IMAP/SMTP). HAL.py can be used on any standard mail server. (Mostly tested on GMail so far).
 * **By a friendly developer** For anything at all, just open up an issue!
 * **User-defined labels support** Each inbox mail can be assigned a user defined label. The labels are either GMail flavored labels (non standard) or simply mentioned in the summary mail (robust).
 * **LLM Agnostic** [LiteLLM](https://docs.litellm.ai/docs/providers/) is used to enable calling any LLM with only 3 modifications to the settings (API KEY and the name of the LLM). For example OpenAI, Mistral, Hugginface, Claude, ...
