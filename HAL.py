@@ -71,7 +71,7 @@ def p(s: str) -> None:
 
 
 class HAL:
-    VERSION = "1.1.0"
+    VERSION = "1.1.1"
 
     @typechecked
     def __init__(
@@ -522,12 +522,31 @@ class HAL:
         )
         mess_summary = ans_summary["choices"][0]["message"]["content"]
 
+        # remove http links as extra security against prompt injections attack
+        mess_summary = re.sub(r"(http|https)://[^\s]+", "[HTTP_LINK]", mess_summary)
+        assert "://" not in mess_summary, (
+            "Found '://' in the mail summary, this is unexpected and can be "
+            "the result of an ongoing prompt injection attack. "
+            "Here's the redacted content of the mail:\n'''\n"
+            f"{mess_summary.replace('://', ':/')}\n'''"
+        )
+
         p("Shortening the summary.")
         short_ans_summary = self._summarizer(
             mess_summary,
             prompt=self.short_summarizer_prompt
         )
         short_mess_summary = short_ans_summary["choices"][0]["message"]["content"]
+        short_mess_summary = re.sub(r"(http|https)://[^\s]+", "[HTTP_LINK]", short_mess_summary)
+        assert "://" not in short_mess_summary, (
+            "Found '://' in the shortened mail summary, this is unexpected and can be "
+            "the result of an ongoing prompt injection attack. "
+            "Here's the redacted content of the mail:\n'''\n"
+            f"{short_mess_summary.replace('://', ':/')}\n'''"
+        )
+
+        # remove http links as extra security against prompt injections attack
+        short_mess_summary = re.sub(r"(http|https)://[^\s]+", "[HTTP_LINK]", short_mess_summary)
 
         # get labels from LLM
         if not self.disable_labels_entirely:

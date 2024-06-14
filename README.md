@@ -13,9 +13,9 @@
 * **Obedient** With `--interactive`: asks for confirmation before doing anything important.
 * **Reasonably secure**
     1. Any link found in the Incoming mail is redacted before sending it to the LLM for summary. This reduces costs but more importantly mitigates the risk of a malicious email using prompt injection techniques (or not yet discovered techniques!) to exfiltrate information etc.
-    2. Attachment names are accessible to the LLM but not the content.
-    3. HAL.py will ask for confirmation if receiving an unexpectely large number of mails (see `--n_mail_limit`).
-    4. HAL.py will ask for confirmation if receiving an unexpectedly large email (see `--tkn_warn_limit`)
+    2. Any link found in the output of the LLM is checked to make sure it contains no links. Any remaining '://' found will crash HAL with a helpful error message.
+    3. Attachment names are accessible to the LLM but not the content.
+    4. HAL.py will ask for confirmation if receiving an unexpectely large number of mails (see `--n_mail_limit`) or an unexpectedly large email (see `--tkn_warn_limit`).
 
 
 ## How to
