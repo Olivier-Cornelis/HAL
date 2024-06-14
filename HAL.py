@@ -517,12 +517,15 @@ class HAL:
         # get summary from LLM
         p("Summarizing.")
         ans_summary = self._summarizer(
-            content, prompt=self.summarizer_prompt)
+            content,
+            prompt=self.summarizer_prompt,
+        )
         mess_summary = ans_summary["choices"][0]["message"]["content"]
 
         p("Shortening the summary.")
         short_ans_summary = self._summarizer(
-            mess_summary, prompt=self.short_summarizer_prompt
+            mess_summary,
+            prompt=self.short_summarizer_prompt
         )
         short_mess_summary = short_ans_summary["choices"][0]["message"]["content"]
 
