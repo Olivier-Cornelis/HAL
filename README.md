@@ -119,7 +119,7 @@ LLM_API_KEY = "YOUR_KEY"
 
 ## FAQ
 * **Why did you do this?** A friend works for a well known international company and I kept telling him to use AI to make better use of his time at work. To prove my point I coded HAL.py in a few hours.
-* **Can HAL.py read my attachments?** HAL.py can access the attachments name but not their contents. Parly because reading the content would be a security risk, but also because it could make the cost of an email unpredictable: if a colleague sends you a short mail asking you to read a long attached PDF, you don't want HAL.py to read the whole PDF.
+* **Can HAL.py read my attachments?** HAL.py can access the attachments name but not their contents. Partly because reading the content would be a security risk, but also because it could make the cost of an email unpredictable: if a colleague sends you a short mail asking you to read a long attached PDF, you don't want HAL.py to read the whole PDF.
 * **What happens if I receive millions of main in a spam attack?** HAL.py will ask for confirmation if more than `--n_mail_limit` mails are received.
 * **What happpens if I receive a very very long email?** HAL.py will ask for confirmation if an email contains more tokens than `--tkn_warn_limit`.
 
